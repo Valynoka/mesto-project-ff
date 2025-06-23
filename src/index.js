@@ -37,33 +37,33 @@ const popupList = document.querySelectorAll('.popup')
 //поэтому я выбрал дать наименование переменным по строго по блокам. 
 // const closePopup = document.querySelectorAll('.popup__close')
 // closePopup.forEach((item) => {
-//   item.addEventListener('click', (evt) => {
-//     closeModal(evt)
+//   item.addEventListener('click', (popup) => {
+//     closeModal(popup)
 //   })
 // })
 
 
 //Открываем окно для профиля
-const openProfilePopup = (evt) => {
+const openProfilePopup = (popup) => {
   //Передаем данные из инпутов popup в профиль
   profileInputPopupName.value = profileTitle.textContent;
   profileInputPopupDescription.value = profileDescription.textContent;
-  openModal(evt)
+  openModal(popup)
 }
 
 //Добавляем класс is-open для popup_type_edit
 profileEditBtn.addEventListener('click', () => openProfilePopup(profilePopupEdit));
 
 //Закрываем окно профиля
-const closeProfilePopup = (evt) => {
-  closeModal(evt)
+const closeProfilePopup = (popup) => {
+  closeModal(popup)
 }
 
 profileClosePopup.addEventListener('click', () => closeProfilePopup(profilePopupEdit));
 
 //Редактируем данные в профиль
-const editDataInProfile = (evt) => {
-  evt.preventDefault();
+const editDataInProfile = (popup) => {
+  popup.preventDefault();
   //Данные из инпутов переписываем в профиль
   profileTitle.textContent = profileInputPopupName.value;
   profileDescription.textContent = profileInputPopupDescription.value;
@@ -73,21 +73,21 @@ const editDataInProfile = (evt) => {
 profileForm.addEventListener('submit', editDataInProfile);
 
 //Открываем окно для карточек
-const openNewCardPopup = (evt) => {
-  openModal(evt)
+const openNewCardPopup = (popup) => {
+  openModal(popup)
 }
 newCardAddBtn.addEventListener('click', () => openNewCardPopup(newCardPopup))
 
 //Закрываем окно профиля с карточками
-const closeNewCardPopup = (evt) => {
-  closeModal(evt)
+const closeNewCardPopup = (popup) => {
+  closeModal(popup)
 }
 
 newCardClosePopup.addEventListener('click', () => closeNewCardPopup(newCardPopup));
 
 //Добавляем новую карточку
-const addNewCard = (evt) => {
-  evt.preventDefault();
+const addNewCard = (popup) => {
+  popup.preventDefault();
   cardContainer.prepend(createCard(newCardInputLink.value, newCardInputCardName.value, dellCard, likeFunc, displayImagePopup));
   newCardForm.reset();
   closeModal(newCardPopup)
@@ -104,11 +104,11 @@ const displayImagePopup = (cardLink, cardName) => {
 }
 
 //Закрываем popup для изображения
-const imgPopupClose = (evt) => {
-  closeModal(evt)
+const closeImgPopup = (popup) => {
+  closeModal(popup)
 }
 
-imageZoomPopupClose.addEventListener('click', () => imgPopupClose(imageZoomPopup));
+imageZoomPopupClose.addEventListener('click', () => closeImgPopup(imageZoomPopup));
 
 //Добавляем анимацию для всех popup - перебирайем все элементы имеющие popup и добавляем необходимый класс
 popupList.forEach((item) => {
