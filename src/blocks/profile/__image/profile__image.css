@@ -8,6 +8,25 @@
   background-position: center;
   margin: 0 29px 0 0;
   background-image: url(../../../images/avatar.jpg);
+  cursor: pointer;
+}
+
+.profile__image::before {
+  content: '';
+  width: 120px;
+  height: 120px;
+  -webkit-border-radius: 50%;
+  -moz-border-radius: 50%;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.8) url('../../../images/Vector.svg') center no-repeat;
+  position: absolute;
+  top: 36px;
+  opacity: 0;
+  transition: 0.3s ease;
+}
+
+.profile__image:hover::before {
+  opacity: 1;
 }
 
 @media screen and (max-width: 740px) {

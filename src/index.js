@@ -1,7 +1,8 @@
 import './pages/index.css';
 import {initialCards} from '../src/scripts/cards.js'
-import {createCard, dellCard, likeFunc} from '../src/scripts/card.js';
+import {createCard, dellCard, likeFunc} from './scripts/card.js';
 import {openModal, closeModal} from './scripts/modal.js'
+import { addNewAvatarOnServer, editProfileOnServer ,addNewCardOnServer, getAllProfilesFromServer, getAllCardsFromServer } from './scripts/api.js';
 
 
 const cardContainer = document.querySelector('.places__list');
@@ -16,14 +17,14 @@ const profileDescription = document.querySelector('.profile__description');//О�
 const profileClosePopup = profilePopupEdit.querySelector('.popup__close');//Кнопка закрытия изменения профиля
 //Submit profile
 const profileForm = profilePopupEdit.querySelector('.popup__form');//Форма добавления информации в профиль
+const profileButton = profilePopupEdit.querySelector('.popup__button')
 //Cards changes
 const newCardPopup = document.querySelector('.popup_type_new-card');//Добавляем класс открытия добавления карточек
 const newCardAddBtn = document.querySelector('.profile__add-button')//Кнопка открытия popup карточек
 const newCardInputCardName = newCardPopup.querySelector('.popup__input_type_card-name');//Инпут заколовка карточки popup
 const newCardInputLink = newCardPopup.querySelector('.popup__input_type_url');//Инпут ссылки на картинку
-//Close card popup
+const newCardSaveButton = newCardPopup.querySelector('.popup__button')
 const newCardClosePopup = newCardPopup.querySelector('.popup__close');
-//Submit profile
 const newCardForm = newCardPopup.querySelector('.popup__form');//Форма добавления информации в профиль
 //Zoom card
 const imageZoomPopup = document.querySelector('.popup_type_image');
@@ -31,90 +32,112 @@ const imageZoomPopupClose = imageZoomPopup.querySelector('.popup__close');
 const imagePopupPicture = imageZoomPopup.querySelector('.popup__image');
 const imagePopupCaption = imageZoomPopup.querySelector('.popup__caption');
 //Анимация для всех popup
-const popupList = document.querySelectorAll('.popup')
+const popupList = document.querySelectorAll('.popup');
+//Change avatar
+const avatarPopup = document.querySelector('.profile__image');//Кнопка-картинка для открытия popup и изменения аватара
+const avatarPopupTypeEdit = document.querySelector('.popup_type_edit_avatar');//
+const avatarPopupClose = avatarPopupTypeEdit.querySelector('.popup__close');//Кнопка закрытия popup смены аватара
+const avatarPopupForm = avatarPopupTypeEdit.querySelector('.popup__form');
+const avatarPopupInput = avatarPopupTypeEdit.querySelector('.popup__input');
+const avatarPopupButtonSubmit = avatarPopupTypeEdit.querySelector('.popup__button');
 
-//Закрытие всех оконn - в комментарии было, как я понял, предложено несколько вариантов
-//поэтому я выбрал дать наименование переменным по строго по блокам. 
-// const closePopup = document.querySelectorAll('.popup__close')
-// closePopup.forEach((item) => {
-//   item.addEventListener('click', (popup) => {
-//     closeModal(popup)
-//   })
-// })
+// Получаем все карточки
+const showDataOnServer = [getAllProfilesFromServer(), getAllCardsFromServer()];
 
+let userId;
 
-//Открываем окно для профиля
-const openProfilePopup = (popup) => {
-  //Передаем данные из инпутов popup в профиль
+const showLikes = (likesData) => likesData || '';
+
+Promise.all(showDataOnServer)
+  .then(([userData, cardsData]) => {
+    userId = userData._id;
+    avatarPopup.setAttribute('style', `background-image: url(${userData.avatar});`)
+    profileTitle.textContent = userData.name;
+    profileDescription.textContent = userData.about;
+    cardsData.forEach((resItem) => {
+      cardContainer.prepend(createCard(resItem.name, resItem.link, userId));
+      showLikes(resItem.likes.length)
+    })
+  })
+  .catch((err) => {
+    console.log(err);
+  })
+
+const editAvatar = (evt) => {
+  evt.preventDefault();
+  avatarPopupButtonSubmit.textContent = 'Сохранение...'
+  addNewAvatarOnServer(avatarPopupInput.value)
+    .then((avatar) => {
+      avatarPopup.setAttribute('style', `background-image: url(${avatar.value});`)
+      avatarPopupForm.reset();
+      closeModal(avatarPopupTypeEdit);
+    })
+    .catch((err) => {
+      console.log(err)
+    })
+    .finally(() => {
+      avatarPopupButtonSubmit.textContent = 'Сохранить'
+    })
+};
+
+const openProfilePopup = () => {
+  openModal(profilePopupEdit)
   profileInputPopupName.value = profileTitle.textContent;
   profileInputPopupDescription.value = profileDescription.textContent;
-  openModal(popup)
 }
 
-//Добавляем класс is-open для popup_type_edit
-profileEditBtn.addEventListener('click', () => openProfilePopup(profilePopupEdit));
-
-//Закрываем окно профиля
-const closeProfilePopup = (popup) => {
-  closeModal(popup)
+const editProfile = (evt) => {
+  evt.preventDefault();
+  editProfileOnServer(profileInputPopupName.value, profileInputPopupDescription.value)
+    .then((profileData) => {
+      profileTitle.textContent = profileData.name;
+      profileDescription.textContent = profileData.about;
+      closeModal(profilePopupEdit)
+    })
+    .catch((err) => {
+      console.log(err)
+    })
 }
 
-profileClosePopup.addEventListener('click', () => closeProfilePopup(profilePopupEdit));
-
-//Редактируем данные в профиль
-const editDataInProfile = (popup) => {
-  popup.preventDefault();
-  //Данные из инпутов переписываем в профиль
-  profileTitle.textContent = profileInputPopupName.value;
-  profileDescription.textContent = profileInputPopupDescription.value;
-  closeModal(profilePopupEdit)
+const addNewCard = (evt) => {
+  evt.preventDefault();
+  addNewCardOnServer(newCardInputCardName.value, newCardInputLink.value)
+    .then((cardData) => {
+      cardContainer.prepend(createCard(cardData.name, cardData.link, userId));
+      newCardForm.reset();
+      closeModal(newCardPopup);
+    })
+    .catch((err) => {
+      console.log(err);
+    })
 }
 
-profileForm.addEventListener('submit', editDataInProfile);
+//Обработчики кнопок
+//Avatar
+avatarPopup.addEventListener('click', () => openModal(avatarPopupTypeEdit));
+avatarPopupClose.addEventListener('click', () => closeModal(avatarPopupTypeEdit));
+avatarPopupForm.addEventListener('submit', editAvatar);
 
-//Открываем окно для карточек
-const openNewCardPopup = (popup) => {
-  openModal(popup)
-}
-newCardAddBtn.addEventListener('click', () => openNewCardPopup(newCardPopup))
-
-//Закрываем окно профиля с карточками
-const closeNewCardPopup = (popup) => {
-  closeModal(popup)
-}
-
-newCardClosePopup.addEventListener('click', () => closeNewCardPopup(newCardPopup));
-
-//Добавляем новую карточку
-const addNewCard = (popup) => {
-  popup.preventDefault();
-  cardContainer.prepend(createCard(newCardInputLink.value, newCardInputCardName.value, dellCard, likeFunc, displayImagePopup));
-  newCardForm.reset();
-  closeModal(newCardPopup)
-}
-
+//Profiles
+profileEditBtn.addEventListener('click', openProfilePopup);
+profileClosePopup.addEventListener('click', () =>closeModal(profilePopupEdit));
+profileForm.addEventListener('submit', editProfile);
+//New cards
+newCardAddBtn.addEventListener('click', () => openModal(newCardPopup));
+newCardClosePopup.addEventListener('click', () => closeModal(newCardPopup));
 newCardForm.addEventListener('submit', addNewCard);
+imageZoomPopup.addEventListener('click', displayImagePopup);
+imageZoomPopupClose.addEventListener('click', () => closeModal(imageZoomPopup));
 
-//Добавляем popup для изображения
-const displayImagePopup = (cardLink, cardName) => {
-  imagePopupPicture.src = cardLink;
-  imagePopupPicture.alt = cardName;
-  imagePopupCaption.textContent = cardName;
+//Плавные карточки
+popupList.forEach((popup) => {
+  popup.classList.add('popup_is-animated')
+});
+
+//Увеличение карточек
+export const displayImagePopup = (cardName, cardLink) => {
   openModal(imageZoomPopup);
+  imagePopupPicture.src = cardLink;
+  imagePopupPicture.name = cardName;
+  imagePopupCaption.textContent = cardName;
 }
-
-//Закрываем popup для изображения
-const closeImgPopup = (popup) => {
-  closeModal(popup)
-}
-
-imageZoomPopupClose.addEventListener('click', () => closeImgPopup(imageZoomPopup));
-
-//Добавляем анимацию для всех popup - перебирайем все элементы имеющие popup и добавляем необходимый класс
-popupList.forEach((item) => {
-  item.classList.add('popup_is-animated');
-})
-
-initialCards.forEach((item) => {
-  cardContainer.append(createCard(item.link, item.name, dellCard, likeFunc, displayImagePopup));
-})
