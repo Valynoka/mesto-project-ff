@@ -1,9 +1,8 @@
 import './pages/index.css';
-import {initialCards} from '../src/scripts/cards.js'
 import {createCard, dellCard, likeFunc} from './scripts/card.js';
 import {openModal, closeModal} from './scripts/modal.js'
 import { addNewAvatarOnServer, editProfileOnServer ,addNewCardOnServer, getAllProfilesFromServer, getAllCardsFromServer } from './scripts/api.js';
-
+import { enableValidation, clearVaValidation } from './scripts/validation.js'
 
 const cardContainer = document.querySelector('.places__list');
 //Profile changes
@@ -40,28 +39,16 @@ const avatarPopupClose = avatarPopupTypeEdit.querySelector('.popup__close');//К
 const avatarPopupForm = avatarPopupTypeEdit.querySelector('.popup__form');
 const avatarPopupInput = avatarPopupTypeEdit.querySelector('.popup__input');
 const avatarPopupButtonSubmit = avatarPopupTypeEdit.querySelector('.popup__button');
+let userId = null;
 
-// Получаем все карточки
-const showDataOnServer = [getAllProfilesFromServer(), getAllCardsFromServer()];
-
-let userId;
-
-const showLikes = (likesData) => likesData || '';
-
-Promise.all(showDataOnServer)
-  .then(([userData, cardsData]) => {
-    userId = userData._id;
-    avatarPopup.setAttribute('style', `background-image: url(${userData.avatar});`)
-    profileTitle.textContent = userData.name;
-    profileDescription.textContent = userData.about;
-    cardsData.forEach((resItem) => {
-      cardContainer.prepend(createCard(resItem.name, resItem.link, userId));
-      showLikes(resItem.likes.length)
-    })
-  })
-  .catch((err) => {
-    console.log(err);
-  })
+const obj = ({
+  formSelector: '.popup__form',
+  inputSelector: '.popup__input',
+  submitButtonSelector: '.popup__button',
+  inactiveButtonClass: 'popup__button_disabled',
+  inputErrorClass: 'popup__input_type_error',
+  errorClass: 'popup__error_visible'
+}); 
 
 const editAvatar = (evt) => {
   evt.preventDefault();
@@ -70,6 +57,7 @@ const editAvatar = (evt) => {
     .then((avatar) => {
       avatarPopup.setAttribute('style', `background-image: url(${avatar.value});`)
       avatarPopupForm.reset();
+      clearVaValidation(avatarPopupTypeEdit, obj)
       closeModal(avatarPopupTypeEdit);
     })
     .catch((err) => {
@@ -84,37 +72,44 @@ const openProfilePopup = () => {
   openModal(profilePopupEdit)
   profileInputPopupName.value = profileTitle.textContent;
   profileInputPopupDescription.value = profileDescription.textContent;
+  clearVaValidation(profilePopupEdit, obj);
 }
 
 const editProfile = (evt) => {
   evt.preventDefault();
+  profileButton.textContent = 'Сохраненеие...'
   editProfileOnServer(profileInputPopupName.value, profileInputPopupDescription.value)
     .then((profileData) => {
       profileTitle.textContent = profileData.name;
       profileDescription.textContent = profileData.about;
-      closeModal(profilePopupEdit)
+      // clearVaValidation(profilePopupEdit, obj);
+      closeModal(profilePopupEdit);
     })
     .catch((err) => {
       console.log(err)
     })
+    .finally(() => {profileButton.textContent = 'Сохранить'})
 }
 
 const addNewCard = (evt) => {
   evt.preventDefault();
+  newCardSaveButton.textContent = 'Сохраненеие...'
   addNewCardOnServer(newCardInputCardName.value, newCardInputLink.value)
     .then((cardData) => {
-      cardContainer.prepend(createCard(cardData.name, cardData.link, userId));
+      cardContainer.prepend(createCard(cardData.name, cardData.link, cardData._id, cardData.likes, cardData.owner._id, userId, config, dellCard, likeFunc, displayImagePopup));
       newCardForm.reset();
+      clearVaValidation(newCardPopup, obj);
       closeModal(newCardPopup);
     })
     .catch((err) => {
       console.log(err);
     })
+    .finally(() => {newCardSaveButton.textContent = 'Сохранить'})
 }
 
 //Обработчики кнопок
 //Avatar
-avatarPopup.addEventListener('click', () => openModal(avatarPopupTypeEdit));
+avatarPopup.addEventListener('click', () => {clearVaValidation(avatarPopupTypeEdit, obj), openModal(avatarPopupTypeEdit)});
 avatarPopupClose.addEventListener('click', () => closeModal(avatarPopupTypeEdit));
 avatarPopupForm.addEventListener('submit', editAvatar);
 
@@ -123,7 +118,7 @@ profileEditBtn.addEventListener('click', openProfilePopup);
 profileClosePopup.addEventListener('click', () =>closeModal(profilePopupEdit));
 profileForm.addEventListener('submit', editProfile);
 //New cards
-newCardAddBtn.addEventListener('click', () => openModal(newCardPopup));
+newCardAddBtn.addEventListener('click', () => {clearVaValidation(newCardPopup, obj), openModal(newCardPopup)});
 newCardClosePopup.addEventListener('click', () => closeModal(newCardPopup));
 newCardForm.addEventListener('submit', addNewCard);
 imageZoomPopup.addEventListener('click', displayImagePopup);
@@ -141,3 +136,22 @@ export const displayImagePopup = (cardName, cardLink) => {
   imagePopupPicture.name = cardName;
   imagePopupCaption.textContent = cardName;
 }
+
+enableValidation(obj);
+
+// Получаем все карточки + не пойму как получить лайки
+const showDataOnServer = [getAllProfilesFromServer(), getAllCardsFromServer()];
+
+Promise.all(showDataOnServer)
+  .then(([userData, cardsData]) => {
+    userId = userData._id;
+    avatarPopup.setAttribute('style', `background-image: url(${userData.avatar});`)
+    profileTitle.textContent = userData.name;
+    profileDescription.textContent = userData.about;
+    cardsData.forEach((cardData) => {
+      cardContainer.prepend(createCard(cardData.name, cardData.link, userId));
+    })
+  })
+  .catch((err) => {
+    console.log(err);
+  })

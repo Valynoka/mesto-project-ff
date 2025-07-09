@@ -8,6 +8,20 @@
   box-sizing: border-box;
   padding: 10px 0 0;
   margin-bottom: 10px;
+  outline: none;
+}
+
+.popup__input_type_error {
+  border-bottom: 1px solid red;
+}
+
+.popup__error_visible {
+  color: red;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 100%;
 }
 
 .popup__input:last-of-type {

@@ -1,7 +1,7 @@
 import { dellNewCardFromServer, addLikeOnCard, dellLikeOnCard } from "./api";
 import {displayImagePopup } from '../index'
 
-export const createCard = (cardName, cardLink, cardId, currentLikes) => {
+export const createCard = (cardName, cardLink, cardId, cardLikes, currentLikes, config, card, userId) => {
   const cardTamplate = document.querySelector('#card-template').content;
   //Клонируем элемент листа, который нужно будет наполнить
   const cardElement = cardTamplate.querySelector('.places__item').cloneNode(true);
@@ -17,24 +17,28 @@ export const createCard = (cardName, cardLink, cardId, currentLikes) => {
   cartTitle.textContent = cardName;
   likeCount.textContent = currentLikes;
 
-  dellButton.addEventListener('click', () => dellCard(cardElement, cardId));
+  dellButton.addEventListener('click', () => dellCard(cardElement, cardId, card, config, dellNewCardFromServer));
   likeButton.addEventListener('click', () => likeFunc(likeButton, likeCount, cardId));
   cardImage.addEventListener('click', () => displayImagePopup(cardName, cardLink));
 
-  // if (ownerId !== userId) {
-  //   dellButton.remove()
-  // }
-
-  // if (likeArr && likeArr.some(user => user._id === userId)) {
-  //   likeButton.classList.contains('card__like-button_is-active')
+  if (cardId !== userId) {
+    dellButton.remove()
+  }
+  //Прошу прощения, за дерзость, но без комментариев от Вас я не разберусь
+  //не могу получить лайки на карточки и почему то они не ставятся, хотя все вроде верно написал
+  //не могу разобраться с тем, почему карточки перестали удаляться до этого все было хорошо, они добавлялись, 
+  //определялись, как мои собственные и я их мог удалить. Сейчас, как нет - будто все не мои, даже те, которые я только что добавил. 
+  
+  // if (cardLikes.some(user => user._id === userId)) {
+  //   likeButton.classList.toggle('card__like-button_is-active')
   // }
 
   return cardElement;
 }
 
 //Удаления всей карточки
-export const dellCard = (card, cardId) => {
-  dellNewCardFromServer(cardId)
+export const dellCard = (card, cardId, config) => {
+  dellNewCardFromServer(config, cardId)
     .then(() => {
       card.remove()
     })
