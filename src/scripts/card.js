@@ -46,10 +46,16 @@ export const createCard = (cardData, userID) => {
     }
   })
 
-
-
   //Повесили на кнопку обработчик с функцией удаления карточек
-  dellButton.addEventListener('click', () => dellCard(cardData, userID))
+  dellButton.addEventListener('click', () => {
+    dellNewCardFromServer(cardData._id)
+      .then(() => {
+        cardElement.remove();
+      })
+      .catch((err) => {
+        console.log(err);
+      });
+    })
   //Кнопака удаления должна быть только у наших карточек - сравним по id карточку-автора и заблокируем кнопку
   const isOwner = cardData.owner && cardData.owner._id === userID;
   //Кнопка только на наших карточках
@@ -65,36 +71,14 @@ export const createCard = (cardData, userID) => {
   return cardElement;
 }
 
-//Функция удаления карточек с сервера
-const dellCard = (cardData) => {
-  dellNewCardFromServer(cardData._id)
-    .then(() => {
-      cardElement.remove();
-    })
-    .catch((err) => {
-      console.log(err);
-    })
-};
-
-//Функция добавления лайков
-export const likeCard = (cardData, likeButton, likeCount) => {
-  if (likeButton.classList.contains('card__like-button_is-active')){
-    dellLikeOnCard(cardData._id)
-      .then((res) => {
-        likeCount.textContent = res.likes.length;
-        likeButton.classList.remove('card__like-button_is-active');
-      })
-      .catch((err) => {
-        console.log(err)
-      })
-  } else {
-    addLikeOnCard(cardData._id)
-      .then((res) => {
-        likeCount.textContent = res.likes.length;
-        likeButton.classList.add('card__like-button_is-active');
-    })
-    .catch((err) => {
-      console.log(err)
-    })
-  }
-};
+//Функция удаления карточек с сервера, но так как cardElement не в ее области видимотси, то карточка не удалаяется на странице,
+//а пропадает только, когда мы перезагружаем страницу, поэтому заидываем ее в обработчик события внутри createCard
+// const dellCard = (cardData) => {
+//   dellNewCardFromServer(cardData._id)
+//     .then(() => {
+//       cardElement.remove();
+//     })
+//     .catch((err) => {
+//       console.log(err);
+//     })
+// };
