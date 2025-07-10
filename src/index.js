@@ -1,8 +1,14 @@
 import './pages/index.css';
-import {createCard, dellCard, likeFunc} from './scripts/card.js';
+import {createCard, dellCard, likeCard} from './scripts/card.js';
 import {openModal, closeModal} from './scripts/modal.js'
-import { addNewAvatarOnServer, editProfileOnServer ,addNewCardOnServer, getAllProfilesFromServer, getAllCardsFromServer } from './scripts/api.js';
-import { enableValidation, clearVaValidation } from './scripts/validation.js'
+import { enableValidation, clearVaValidation } from './scripts/validation.js';
+import { 
+  getProfileFromServer,
+  getAllCardsFromServer,
+  editProfileOnServer,
+  addNewCardOnServer,
+  addNewAvatarOnServer
+  } from './scripts/api.js';
 
 const cardContainer = document.querySelector('.places__list');
 //Profile changes
@@ -39,7 +45,7 @@ const avatarPopupClose = avatarPopupTypeEdit.querySelector('.popup__close');//К
 const avatarPopupForm = avatarPopupTypeEdit.querySelector('.popup__form');
 const avatarPopupInput = avatarPopupTypeEdit.querySelector('.popup__input');
 const avatarPopupButtonSubmit = avatarPopupTypeEdit.querySelector('.popup__button');
-let userId = null;
+let userID = null;
 
 const obj = ({
   formSelector: '.popup__form',
@@ -50,108 +56,152 @@ const obj = ({
   errorClass: 'popup__error_visible'
 }); 
 
-const editAvatar = (evt) => {
-  evt.preventDefault();
-  avatarPopupButtonSubmit.textContent = 'Сохранение...'
-  addNewAvatarOnServer(avatarPopupInput.value)
-    .then((avatar) => {
-      avatarPopup.setAttribute('style', `background-image: url(${avatar.value});`)
-      avatarPopupForm.reset();
-      clearVaValidation(avatarPopupTypeEdit, obj)
-      closeModal(avatarPopupTypeEdit);
-    })
-    .catch((err) => {
-      console.log(err)
-    })
-    .finally(() => {
-      avatarPopupButtonSubmit.textContent = 'Сохранить'
-    })
-};
-
-const openProfilePopup = () => {
-  openModal(profilePopupEdit)
-  profileInputPopupName.value = profileTitle.textContent;
-  profileInputPopupDescription.value = profileDescription.textContent;
-  clearVaValidation(profilePopupEdit, obj);
-}
-
-const editProfile = (evt) => {
-  evt.preventDefault();
-  profileButton.textContent = 'Сохраненеие...'
-  editProfileOnServer(profileInputPopupName.value, profileInputPopupDescription.value)
-    .then((profileData) => {
-      profileTitle.textContent = profileData.name;
-      profileDescription.textContent = profileData.about;
-      // clearVaValidation(profilePopupEdit, obj);
-      closeModal(profilePopupEdit);
-    })
-    .catch((err) => {
-      console.log(err)
-    })
-    .finally(() => {profileButton.textContent = 'Сохранить'})
-}
-
-const addNewCard = (evt) => {
-  evt.preventDefault();
-  newCardSaveButton.textContent = 'Сохраненеие...'
-  addNewCardOnServer(newCardInputCardName.value, newCardInputLink.value)
-    .then((cardData) => {
-      cardContainer.prepend(createCard(cardData.name, cardData.link, cardData._id, cardData.likes, cardData.owner._id, userId, config, dellCard, likeFunc, displayImagePopup));
-      newCardForm.reset();
-      clearVaValidation(newCardPopup, obj);
-      closeModal(newCardPopup);
-    })
-    .catch((err) => {
-      console.log(err);
-    })
-    .finally(() => {newCardSaveButton.textContent = 'Сохранить'})
-}
-
-//Обработчики кнопок
-//Avatar
-avatarPopup.addEventListener('click', () => {clearVaValidation(avatarPopupTypeEdit, obj), openModal(avatarPopupTypeEdit)});
-avatarPopupClose.addEventListener('click', () => closeModal(avatarPopupTypeEdit));
-avatarPopupForm.addEventListener('submit', editAvatar);
-
-//Profiles
-profileEditBtn.addEventListener('click', openProfilePopup);
-profileClosePopup.addEventListener('click', () =>closeModal(profilePopupEdit));
-profileForm.addEventListener('submit', editProfile);
-//New cards
-newCardAddBtn.addEventListener('click', () => {clearVaValidation(newCardPopup, obj), openModal(newCardPopup)});
-newCardClosePopup.addEventListener('click', () => closeModal(newCardPopup));
-newCardForm.addEventListener('submit', addNewCard);
-imageZoomPopup.addEventListener('click', displayImagePopup);
-imageZoomPopupClose.addEventListener('click', () => closeModal(imageZoomPopup));
+//Закрытие окон
+document.querySelectorAll('.popup__close').forEach((btn) => {
+  const popup = btn.closest('.popup');
+  btn.addEventListener('click', closeModal(popup))
+});
 
 //Плавные карточки
 popupList.forEach((popup) => {
   popup.classList.add('popup_is-animated')
 });
 
-//Увеличение карточек
-export const displayImagePopup = (cardName, cardLink) => {
+//Управляем состоянием загрузки
+const renderLoader = (isLoading, button, buttonText = 'Сохранить', loadingText = 'Сохранение...') => {
+  if (isLoading) {
+    button.textContent = loadingText;
+  } else {
+    button.textContent = buttonText;
+  }
+};
+
+//Управление popup с картинками
+export const handleImageClick = (cardData) => {
+  imagePopupPicture.src = cardData.link;
+  imagePopupPicture.alt = cardData.name;
+  imagePopupCaption.textContent = cardData.name;
   openModal(imageZoomPopup);
-  imagePopupPicture.src = cardLink;
-  imagePopupPicture.name = cardName;
-  imagePopupCaption.textContent = cardName;
 }
+
+//Функция обработки редактиврования профиля
+const editProfileFormSubmit = (evt) => {
+  evt.preventDefault();
+  //Размещаем идикатор загруки на кнопке внутри формы
+  renderLoader(true, profileEditBtn);
+  //Отправляем данные на сервер
+  editProfileOnServer(
+    profileInputPopupName.value,
+    profileInputPopupDescription.value)
+    .then((userData) => {
+      //После того, как данные будут отправленны на сервер необходимо, чтобы они вернулись обратно и отрисовались
+      profileTitle.textContent = userData.name;
+      profileDescription.textContent = userData.about;
+      closeModal(profilePopupEdit)
+    })
+  //Обрабатываем ошибки
+  .catch((err) => {
+    console.log(`Упс...${err}`);
+  })
+  //Необходимо отобразить, что загрузка закончена и вернуть кнопку в обычное внешнее состояние
+  .finally(() => {renderLoader(false, profileEditBtn)})
+};
+
+//После того как сделали функцию для редактиврования профиля, может открывать окно
+const openProfilePopup = () => {
+  openModal(profilePopupEdit);
+  profileInputPopupName.value = profileTitle.textContent;
+  profileInputPopupDescription.value = profileDescription.textContent;
+  clearVaValidation(profileForm, obj)
+}
+
+//Функция обновления аватара
+const addNewAvatar = (evt) => {
+  evt.preventDefault();
+  //Аналогично демотстрируем позьзователю как происходит загрузка + конец функции
+  renderLoader(true, avatarPopupButtonSubmit);
+  //Отправляем данные на сервер
+  addNewAvatarOnServer(avatarPopupInput.value)
+    .then((newAvatar) => {
+      avatarPopup.style.backgroundImage = `url(${newAvatar.avatar})`;
+      closeModal(avatarPopupTypeEdit);
+      avatarPopupForm.reset();
+    })
+    .catch((err) => {
+      console.log(`Ошибка: ${err}`)
+    })
+    .finally(() => {
+      renderLoader(false, avatarPopupButtonSubmit)
+    });
+}
+
+//Функция добавления новой карточки на сервер
+const addNewCard = (evt) => {
+  evt.preventDefault();
+  //Аналогично вызываем рендер конопки
+  renderLoader(true, newCardSaveButton);
+  //Отправляем данные на сервер, передавая значения, которые мы пропишем в inpit формы
+  addNewCardOnServer(
+    newCardInputCardName.value,
+    newCardInputLink.value)
+    .then((newCard) => {
+      //после того, как мы получим ответ от сервера, мы должны отрисовать карточку
+      cardContainer.prepend(createCard(newCard, userID));
+      closeModal(newCardPopup);
+      newCardForm.reset();
+    })
+    .catch((err) => {
+      console.log(`Ошибка при добавлении карточки: ${err}`)
+    })
+    //Аналогичные действия, как и ранее возвращаем кнопку
+    .finally(() => {
+      renderLoader(false, newCardSaveButton);
+      //убираем валидацию, так как окно закрывается
+      clearVaValidation(newCardForm, obj)
+    })
+}
+
+//Вынесем отдельно случатель форм и кнопок, чтобы были в одном месте
+//Профиль пользователя
+//Слушательно для открытия формы профиля для редактирования
+profileEditBtn.addEventListener('click', openProfilePopup);
+//Слушатель на форму профиля для отправки данных
+profileForm.addEventListener('submit', editProfileFormSubmit);
+//Закрываем
+profileClosePopup.addEventListener('click', () =>closeModal(profilePopupEdit));
+
+//Открываем окно для обновления авы
+avatarPopup.addEventListener('click', () => {
+  avatarPopupForm.reset();
+  clearVaValidation(avatarPopupForm, obj);
+  openModal(avatarPopupTypeEdit)});
+avatarPopupClose.addEventListener('click', () => closeModal(avatarPopupTypeEdit));
+//Слушатель на форму профиля для отправки данных
+avatarPopupForm.addEventListener('submit', addNewAvatar);
+
+//Открываем окно для добавления карточки
+newCardAddBtn.addEventListener('click', () => {
+  newCardForm.reset();
+  clearVaValidation(newCardForm, obj);
+  openModal(newCardPopup)})
+//Окно открыли - теперь добавим слушатель на форму, чтобы отправить нашу картинку
+newCardForm.addEventListener('submit', addNewCard)
+//Закрываем
+newCardClosePopup.addEventListener('click', () => closeModal(newCardPopup));
+
+//Закрываем наши увеличевабщиеся картинки
+imageZoomPopupClose.addEventListener('click', () => closeModal(imageZoomPopup));
 
 enableValidation(obj);
 
-// Получаем все карточки + не пойму как получить лайки
-const showDataOnServer = [getAllProfilesFromServer(), getAllCardsFromServer()];
-
-Promise.all(showDataOnServer)
-  .then(([userData, cardsData]) => {
-    userId = userData._id;
-    avatarPopup.setAttribute('style', `background-image: url(${userData.avatar});`)
-    profileTitle.textContent = userData.name;
-    profileDescription.textContent = userData.about;
-    cardsData.forEach((cardData) => {
-      cardContainer.prepend(createCard(cardData.name, cardData.link, userId));
-    })
+Promise.all([getProfileFromServer(), getAllCardsFromServer()])
+  .then(([userProfile, cardData]) => {
+    userID = userProfile._id;
+    profileTitle.textContent = userProfile.name;
+    profileDescription.textContent = userProfile.about;
+    avatarPopup.style.backgroundImage = `url(${userProfile.avatar})`;
+    cardData.forEach((card) => cardContainer.prepend(createCard(card, userID)))
   })
   .catch((err) => {
-    console.log(err);
+    console.log('Ошибка при закгрузке', err);
   })

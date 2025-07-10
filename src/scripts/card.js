@@ -1,7 +1,7 @@
 import { dellNewCardFromServer, addLikeOnCard, dellLikeOnCard } from "./api";
-import {displayImagePopup } from '../index'
+import { handleImageClick } from '../index.js';
 
-export const createCard = (cardName, cardLink, cardId, cardLikes, currentLikes, config, card, userId) => {
+export const createCard = (cardData, userID) => {
   const cardTamplate = document.querySelector('#card-template').content;
   //Клонируем элемент листа, который нужно будет наполнить
   const cardElement = cardTamplate.querySelector('.places__item').cloneNode(true);
@@ -10,59 +10,88 @@ export const createCard = (cardName, cardLink, cardId, cardLikes, currentLikes, 
   const dellButton = cardElement.querySelector('.card__delete-button');
   const cartTitle = cardElement.querySelector('.card__title');
   const likeButton = cardElement.querySelector('.card__like-button');
-  const likeCount = cardElement.querySelector('.card__count-like');
+
   //Картинка имеет ссылку и описание, необхоимо присвоить им эти значения
-  cardImage.src = cardLink;
-  cardImage.alt = cardName;
-  cartTitle.textContent = cardName;
-  likeCount.textContent = currentLikes;
+  cardImage.src = cardData.link;
+  cardImage.alt = cardData.name;
+  cartTitle.textContent = cardData.name;
 
-  dellButton.addEventListener('click', () => dellCard(cardElement, cardId, card, config, dellNewCardFromServer));
-  likeButton.addEventListener('click', () => likeFunc(likeButton, likeCount, cardId));
-  cardImage.addEventListener('click', () => displayImagePopup(cardName, cardLink));
+   //Контейнер для наших лайков
+  const likeCount = cardElement.querySelector('.card__like-count');
+  likeCount.textContent = cardData.likes.length;
+  //Добавим обработчик на добавление и удаление лайков
+  likeButton.addEventListener('click', () => {
+    //Записываем в переменную, что если кнопка активна
+    const likeOnCard = likeButton.classList.contains('card__like-button_is-active');
+    //то лайк мы удалим
+    if (likeOnCard) {
+      dellLikeOnCard(cardData._id)
+        .then((res) => {
+          likeCount.textContent = res.likes.length;
+          likeButton.classList.remove('card__like-button_is-active');
+        })
+        .catch((err) => {
+          console.log(err)
+        })
+        //в другом же случае наоборот поставим и посчитаем лайки
+    } else {
+      addLikeOnCard(cardData._id)
+        .then((res) => {
+          likeCount.textContent = res.likes.length;
+          likeButton.classList.add('card__like-button_is-active');
+      })
+      .catch((err) => {
+        console.log(err)
+      })
+    }
+  })
 
-  if (cardId !== userId) {
-    dellButton.remove()
+
+
+  //Повесили на кнопку обработчик с функцией удаления карточек
+  dellButton.addEventListener('click', () => dellCard(cardData, userID))
+  //Кнопака удаления должна быть только у наших карточек - сравним по id карточку-автора и заблокируем кнопку
+  const isOwner = cardData.owner && cardData.owner._id === userID;
+  //Кнопка только на наших карточках
+  if (!isOwner) {
+    dellButton.style.display = 'none';
   }
-  //Прошу прощения, за дерзость, но без комментариев от Вас я не разберусь
-  //не могу получить лайки на карточки и почему то они не ставятся, хотя все вроде верно написал
-  //не могу разобраться с тем, почему карточки перестали удаляться до этого все было хорошо, они добавлялись, 
-  //определялись, как мои собственные и я их мог удалить. Сейчас, как нет - будто все не мои, даже те, которые я только что добавил. 
-  
-  // if (cardLikes.some(user => user._id === userId)) {
-  //   likeButton.classList.toggle('card__like-button_is-active')
-  // }
+
+  //Обработчик клика по картинке - увеличение
+  cardImage.addEventListener('click', () => {
+    handleImageClick({name: cardData.name, link: cardData.link})
+  })
 
   return cardElement;
 }
 
-//Удаления всей карточки
-export const dellCard = (card, cardId, config) => {
-  dellNewCardFromServer(config, cardId)
+//Функция удаления карточек с сервера
+const dellCard = (cardData) => {
+  dellNewCardFromServer(cardData._id)
     .then(() => {
-      card.remove()
+      cardElement.remove();
     })
     .catch((err) => {
-      console.log(err)
+      console.log(err);
     })
-}
+};
 
-//Лайк
-export const likeFunc = (likeButton, cardId, likeCount) => {
+//Функция добавления лайков
+export const likeCard = (cardData, likeButton, likeCount) => {
   if (likeButton.classList.contains('card__like-button_is-active')){
-    dellLikeOnCard(cardId)
+    dellLikeOnCard(cardData._id)
       .then((res) => {
         likeCount.textContent = res.likes.length;
-        likeButton.classList.toggle('card__like-button_is-active');
+        likeButton.classList.remove('card__like-button_is-active');
       })
       .catch((err) => {
         console.log(err)
       })
   } else {
-    addLikeOnCard(cardId)
+    addLikeOnCard(cardData._id)
       .then((res) => {
         likeCount.textContent = res.likes.length;
-        likeButton.classList.toggle('card__like-button_is-active');
+        likeButton.classList.add('card__like-button_is-active');
     })
     .catch((err) => {
       console.log(err)
