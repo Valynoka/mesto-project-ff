@@ -1,7 +1,6 @@
 import { dellNewCardFromServer, addLikeOnCard, dellLikeOnCard } from "./api";
-import { handleImageClick } from '../index.js';
 
-export const createCard = (cardData, userID) => {
+export const createCard = ( cardData, userID, handleImageClick ) => {
   const cardTamplate = document.querySelector('#card-template').content;
   //Клонируем элемент листа, который нужно будет наполнить
   const cardElement = cardTamplate.querySelector('.places__item').cloneNode(true);
@@ -15,6 +14,9 @@ export const createCard = (cardData, userID) => {
   cardImage.src = cardData.link;
   cardImage.alt = cardData.name;
   cartTitle.textContent = cardData.name;
+
+  //Обработчик клика по картинке - увеличение
+  cardImage.addEventListener('click', () => handleImageClick(cardData));
 
    //Контейнер для наших лайков
   const likeCount = cardElement.querySelector('.card__like-count');
@@ -45,6 +47,10 @@ export const createCard = (cardData, userID) => {
       })
     }
   })
+  //Осталось только запомнить куда мы поставили лайки <3
+  if (cardData.likes && cardData.likes.some(like => like._id === userID)) {
+    likeButton.classList.add('card__like-button_is-active');
+  }
 
   //Повесили на кнопку обработчик с функцией удаления карточек
   dellButton.addEventListener('click', () => {
@@ -62,11 +68,6 @@ export const createCard = (cardData, userID) => {
   if (!isOwner) {
     dellButton.style.display = 'none';
   }
-
-  //Обработчик клика по картинке - увеличение
-  cardImage.addEventListener('click', () => {
-    handleImageClick({name: cardData.name, link: cardData.link})
-  })
 
   return cardElement;
 }

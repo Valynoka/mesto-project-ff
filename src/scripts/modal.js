@@ -12,8 +12,7 @@ export const closeModal = (popup) => {
 
 const closePopupByClickOverlay = (evt) => {
   if(evt.target.classList.contains('popup')){
-    const popup = document.querySelector('.popup_is-opened');
-    closeModal(popup)
+    closeModal(evt.target)
   }
 }
 
